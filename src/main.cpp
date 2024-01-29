@@ -1,11 +1,11 @@
 #include <iostream>
 
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
-
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
 #include "test.h"
 
@@ -62,6 +62,8 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 460");
 
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.0f);
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -76,10 +78,31 @@ int main()
 
         ImGui::ShowDemoWindow();
 
+        {
+            static float f = 0.0;
+            static int   counter = 0;
+
+            ImGui::Begin("New Window");
+
+            ImGui::Text("This is a line of text.");
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            ImGui::ColorEdit3("clear color", (float*)&clear_color);
+
+            if (ImGui::Button("Button")) {
+                counter++;
+            }
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::End();
+        }
+
         // render
         // ------
         ImGui::Render();
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
