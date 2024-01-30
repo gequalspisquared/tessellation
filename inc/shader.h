@@ -2,8 +2,6 @@
 
 #include <string>
 
-// #include <glad/glad.h>
-
 typedef unsigned int ShaderId;
 
 class Shader {

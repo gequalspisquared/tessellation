@@ -7,7 +7,6 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
-#include "test.h"
 #include "shader.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -19,8 +18,6 @@ const unsigned int SCR_HEIGHT = 900;
 
 int main()
 {
-    foo();
-
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -54,7 +51,8 @@ int main()
 
     // build and compile our shader program
     // ------------------------------------
-    Shader shader(RESOURCES_PATH "shaders/vertex.vs", RESOURCES_PATH "shaders/fragment.fs");
+    Shader shader(RESOURCES_PATH "shaders/vertex.vs", 
+                  RESOURCES_PATH "shaders/fragment.fs");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
