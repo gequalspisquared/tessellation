@@ -10,7 +10,7 @@ Camera::Camera(const glm::vec3& position, const glm::vec3& up, float yaw, float 
     , m_pitch(pitch)
     , m_world_up(up)
     , m_front(glm::vec3(0.0f, 0.0f, -1.0f))
-    , m_movement_speed(2.5f)
+    , m_movement_speed(50.5f)
     , m_mouse_sensitivity(0.1f)
     , m_zoom(90.0f) 
 {
@@ -36,6 +36,12 @@ void Camera::process_keyboard(CameraMovement direction, float delta_time) {
             break;
         case CameraMovement::RIGHT:
             m_position += m_right * velocity;
+            break;
+        case CameraMovement::UP:
+            m_position += m_world_up * velocity;
+            break;
+        case CameraMovement::DOWN:
+            m_position -= m_world_up * velocity;
             break;
         default:
             break;

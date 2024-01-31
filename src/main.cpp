@@ -12,15 +12,17 @@
 
 #include "shader.h"
 #include "camera.h"
+#include "heightmap.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow *window);
 
 // settings
-const unsigned int SCR_WIDTH = 1600;
-const unsigned int SCR_HEIGHT = 900;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 Camera camera;
 float last_x = SCR_WIDTH / 2.0f;
@@ -56,6 +58,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetKeyCallback(window, key_callback);
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -69,6 +72,8 @@ int main()
     // ------------------------------------
     Shader shader(RESOURCES_PATH "shaders/vertex.vs", 
                   RESOURCES_PATH "shaders/fragment.fs");
+    Shader heightmap_shader(RESOURCES_PATH "shaders/heightmap.vs",
+                            RESOURCES_PATH "shaders/heightmap.fs");
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
@@ -101,6 +106,10 @@ int main()
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    float scale = 0.25f;
+    float shift = 16.0f;
+    Heightmap heightmap(RESOURCES_PATH "heightmaps/iceland_heightmap.png", scale, shift);
+
     // Setup ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -112,7 +121,12 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 460");
 
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.0f);
+    ImVec4 clear_color = ImVec4(0.15f, 0.25f, 0.30f, 1.0f);
+
+    glEnable(GL_DEPTH_TEST);
+
+    int frame = 0;
+    float avg_fps = 0.0f;
 
     // render loop
     // -----------
@@ -122,6 +136,10 @@ int main()
         delta_time = current_frame - last_frame;
         last_frame = current_frame;
 
+        frame++;
+        avg_fps += 1.0f / delta_time;
+        
+
         // input
         // -----
         processInput(window);
@@ -130,13 +148,20 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::ShowDemoWindow();
+        // ImGui::ShowDemoWindow();
 
         {
             static float f = 0.0;
             static int   counter = 0;
+            static float fps = 0.0;
+
+            if (frame % 10 == 0) {
+                fps = avg_fps / 10.0f;
+                avg_fps = 0.0f;
+            }
 
             ImGui::Begin("New Window");
+            ImGui::Text("FPS: = %.1f", fps);
 
             ImGui::Text("This is a line of text.");
 
@@ -157,7 +182,7 @@ int main()
         ImGui::Render();
         // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // draw our first triangle
         // glUseProgram(shaderProgram);
         shader.use();
@@ -165,7 +190,7 @@ int main()
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.get_zoom()), 
                                                 static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 
-                                                0.1f, 100.0f);
+                                                0.1f, 1000.0f);
         shader.set_mat4("projection", projection);
 
         glm::mat4 view = camera.get_view_matrix();
@@ -177,6 +202,14 @@ int main()
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        heightmap_shader.use();
+        heightmap_shader.set_mat4("projection", projection);
+        heightmap_shader.set_mat4("view", view);
+        heightmap_shader.set_mat4("model", model);
+        heightmap_shader.set_float("scale", scale);
+        heightmap_shader.set_float("shift", shift);
+        heightmap.draw();
         // glBindVertexArray(0); // no need to unbind it every time 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -210,6 +243,10 @@ void processInput(GLFWwindow *window)
         camera.process_keyboard(LEFT, delta_time);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.process_keyboard(RIGHT, delta_time);
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        camera.process_keyboard(UP, delta_time);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+        camera.process_keyboard(DOWN, delta_time);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -249,4 +286,28 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.process_scroll(static_cast<float>(yoffset));
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    static bool cursor_enabled = true;
+    if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+        if (cursor_enabled) {
+            cursor_enabled = false;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        } else {
+            cursor_enabled = true;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    }
+
+    static bool wireframe_enabled = true;
+    if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+        if (wireframe_enabled) {
+            wireframe_enabled = false;
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        } else {
+            wireframe_enabled = true;
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+    }
 }

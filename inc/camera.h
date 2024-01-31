@@ -7,6 +7,8 @@ enum CameraMovement {
     BACKWARD,
     LEFT,
     RIGHT,
+    UP,
+    DOWN,
 };
 
 class Camera {
